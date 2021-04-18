@@ -12,24 +12,25 @@ import java.util.stream.IntStream;
 
 public class NewTransactionTest {
 
-    @RepeatedTest(500)
+    @RepeatedTest(1000)
     public void testCredit() throws TransferException, InterruptedException {
 
         BankAccountRepository bankAccountRepository = new BankAccountRepositoryStub();
-        BankAccountService bankAccountService = new BankAccountService(bankAccountRepository);
+        BankAccountServiceWithSyncTransferMethod bankAccountService = new BankAccountServiceWithSyncTransferMethod(bankAccountRepository);
+//        BankAccountServiceWithSyncTransferObjectLock bankAccountService = new BankAccountServiceWithSyncTransferObjectLock(bankAccountRepository);
+//        BankAccountService bankAccountService = new BankAccountService(bankAccountRepository);
         for (int i=0;i<10;i++) {
-            BankAccount bankAccount = new BankAccount();
-            bankAccount.setAccountNumber("100000000"+i);
-            bankAccount.setCurrentBalance(10000d);
+            BankAccount bankAccount = new BankAccount(100000d, "100000000"+i);
             bankAccountService.saveBankAccount(bankAccount);
         }
 
         ExecutorService executorService = Executors.newFixedThreadPool(100);
-
-        IntStream.range(0,1000).boxed().parallel().forEach((i)->{
+        IntStream.range(0,10000).boxed().parallel().forEach((i)->{
             executorService.submit(()-> {
                 try {
                     bankAccountService.transfer("1000000001", "1000000002", 5);
+                    bankAccountService.transfer("1000000009", "1000000008", 5);
+                    bankAccountService.transfer("1000000008", "1000000009", 5);
                     bankAccountService.transfer("1000000003", "1000000004", 2);
                     bankAccountService.transfer("1000000003", "1000000005", 2);
                 } catch (TransferException e) {
@@ -39,19 +40,20 @@ public class NewTransactionTest {
         });
 
         executorService.shutdown();
-        executorService.awaitTermination(2000, TimeUnit.MILLISECONDS);
+        executorService.awaitTermination(20000, TimeUnit.MILLISECONDS);
 
-        BankAccount sender = bankAccountService.getBankAccount("1000000001");
-        BankAccount receiver = bankAccountService.getBankAccount("1000000002");
-        Assertions.assertTrue(sender.getBalance()==5000, "Balance is " + sender.getBalance());
-        Assertions.assertTrue(receiver.getBalance()==15000);
-        BankAccount receiver3 = bankAccountService.getBankAccount("1000000004");
-        Assertions.assertTrue(receiver3.getBalance()==12000);
-        BankAccount receiver4 = bankAccountService.getBankAccount("1000000005");
-        Assertions.assertTrue(receiver4.getBalance()==12000);
-        BankAccount sender2 = bankAccountService.getBankAccount("1000000003");
-        Assertions.assertTrue(sender2.getBalance()==6000, "Balance is " + sender.getBalance());
-
+        BankAccount account1 = bankAccountService.getBankAccount("1000000001");
+        BankAccount account2 = bankAccountService.getBankAccount("1000000002");
+        Assertions.assertTrue(account1.getBalance()==50000, "Balance is " + account1.getBalance());
+        Assertions.assertTrue(account2.getBalance()==150000);
+        BankAccount account4 = bankAccountService.getBankAccount("1000000004");
+        Assertions.assertTrue(account4.getBalance()==120000);
+        BankAccount account5 = bankAccountService.getBankAccount("1000000005");
+        Assertions.assertTrue(account5.getBalance()==120000);
+        BankAccount account3 = bankAccountService.getBankAccount("1000000003");
+        Assertions.assertTrue(account3.getBalance()==60000, "Balance is " + account1.getBalance());
+        BankAccount account8 = bankAccountService.getBankAccount("1000000008");
+        Assertions.assertTrue(account8.getBalance()==100000, "Balance is " + account8.getBalance());
 
     }
 
@@ -76,17 +78,6 @@ public class NewTransactionTest {
                 throw new TransferException("Bank account does not exist");
             bankAccounts.put(bankAccount.getAccountNumber(), bankAccount);
         }
-    }
-
-
-    @Test
-    public void testMap() {
-        HashMap<ObjectLock, ObjectLock> map = new HashMap<>();
-        ObjectLock objectLock = new ObjectLock("1000000000");
-        map.put(objectLock, objectLock);
-        ObjectLock objectLock2 = new ObjectLock("1000000000");
-        Assertions.assertTrue(map.get(objectLock2) != null);
-        Assertions.assertTrue(map.get(objectLock) != null);
     }
 
 }

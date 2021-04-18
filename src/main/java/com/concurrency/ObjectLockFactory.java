@@ -27,6 +27,8 @@ public class ObjectLockFactory {
             receiverLock = new ObjectLock(receiver);
             map.put(receiverLock, receiverLock);
             return receiverLock;
+        } else if(senderLock != null && receiverLock != null) {
+            return senderLock;
         } else {
             return senderLock;
         }

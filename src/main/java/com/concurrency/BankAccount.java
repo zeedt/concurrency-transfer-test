@@ -7,6 +7,11 @@ public class BankAccount {
     private double balance;
     private String accountNumber;
 
+    public BankAccount(double balance, String accountNumber) {
+        this.balance = balance;
+        this.accountNumber = accountNumber;
+    }
+
     public void setCurrentBalance(double amount) {
         this.balance = amount;
     }
@@ -29,8 +34,6 @@ public class BankAccount {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
         BankAccount that = (BankAccount) o;
         return Objects.equals(accountNumber, that.accountNumber);
     }
@@ -38,5 +41,19 @@ public class BankAccount {
     @Override
     public int hashCode() {
         return Objects.hash(accountNumber);
+    }
+
+    public synchronized void creditAccount(double amount) {
+        this.balance = this.balance + amount;
+    }
+
+    public void initiateTransfer(double amount, BankAccount accountToCredit) {
+        synchronized (this) {
+            if (this.balance < amount) {
+                return;
+            }
+            this.balance = this.balance - amount;
+        }
+        accountToCredit.creditAccount(amount);
     }
 }
